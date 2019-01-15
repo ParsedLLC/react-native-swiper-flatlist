@@ -37,6 +37,7 @@ export default class SwiperFlatList extends PureComponent {
     autoplay: PropTypes.bool.isRequired,
     // autoplayDirection: PropTypes.bool.isRequired,
     autoplayLoop: PropTypes.bool.isRequired,
+    loop: PropTypes.bool.isRequired,
   };
 
   static defaultProps = {
@@ -50,6 +51,7 @@ export default class SwiperFlatList extends PureComponent {
     vertical: false,
     renderAll: false,
     PaginationComponent: Pagination,
+    loop: false,
   };
 
   componentWillMount() {
@@ -64,6 +66,10 @@ export default class SwiperFlatList extends PureComponent {
 
     if (index !== 0) {
       this._scrollToIndex(index, false);
+    }
+
+    if (this._isLoop) {
+      this._scrollToIndex(1, false);
     }
   }
 
@@ -84,8 +90,11 @@ export default class SwiperFlatList extends PureComponent {
       this._renderItem = this.renderChildren;
     } else if (loop && data) {
       this._isLoop = true;
-      this._data = [...data, data[0]];
-      this._renderItem = renderItem;
+      this._data = [data[data.length - 1], ...data, data[0]];
+      this._renderItem = (d) => {
+        const index = d.index === 0 ? this._data.length - 1 : d.index === this._data.length - 1 ? 0 : d.index - 1;
+        return renderItem({ ...d, index });
+      };
     } else if (data) {
       this._data = data;
       this._renderItem = renderItem;
@@ -143,15 +152,19 @@ export default class SwiperFlatList extends PureComponent {
     if (autoplay) {
       this._autoplay(index);
     }
-    this.setState({ paginationIndex: index });
 
-    if(this._isLoop && index === this._data.length - 1) {
-      this._scrollToIndex(0, false);
-      index = 0;
+    if (this._isLoop && index === this._data.length - 1) {
+      index = 1;
+      this._scrollToIndex(index, false);
+    } else if (this._isLoop && index === 0) {
+      index = this._data.length - 2;
+      this._scrollToIndex(index, false);
     }
 
+    this.setState({ paginationIndex: index });
+
     if (onMomentumScrollEnd) {
-      onMomentumScrollEnd({ index }, e);
+      onMomentumScrollEnd({ index: this._isLoop ? index - 1 : index }, e);
     }
   };
 
@@ -164,6 +177,11 @@ export default class SwiperFlatList extends PureComponent {
   getCurrentIndex = () => this.state.paginationIndex;
 
   scrollToIndex = (...args) => this._scrollToIndex(...args);
+
+  scrollBy = (amt, animate = true) => {
+    const index = this.state.paginationIndex + amt;
+    this._scrollToIndex(index, animate);
+  };
 
   renderChildren = ({ item }) => item;
 
