@@ -78,10 +78,14 @@ export default class SwiperFlatList extends PureComponent {
   }
 
   setup = props => {
-    const { children, data, renderItem, renderAll } = props;
+    const { children, data, renderItem, renderAll, loop } = props;
     if (children) {
       this._data = children;
       this._renderItem = this.renderChildren;
+    } else if (loop && data) {
+      this._isLoop = true;
+      this._data = [...data, data[0]];
+      this._renderItem = renderItem;
     } else if (data) {
       this._data = data;
       this._renderItem = renderItem;
@@ -140,6 +144,11 @@ export default class SwiperFlatList extends PureComponent {
       this._autoplay(index);
     }
     this.setState({ paginationIndex: index });
+
+    if(this._isLoop && index === this._data.length - 1) {
+      this._scrollToIndex(0, false);
+      index = 0;
+    }
 
     if (onMomentumScrollEnd) {
       onMomentumScrollEnd({ index }, e);
